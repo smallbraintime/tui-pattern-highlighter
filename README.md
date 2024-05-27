@@ -1,5 +1,5 @@
 # tui-pattern-highlighter
-============
+
 ![Version](https://img.shields.io/badge/version-0.0.1-orange.svg)
 ![Tests](https://img.shields.io/badge/tests-passing-green.svg)
 ![Docs](https://img.shields.io/badge/docs-passing-green.svg)
@@ -7,7 +7,7 @@
 a dead simple search pattern highlighter for ratatui
 
 ## Example
-```
+```rust
 use tui_pattern_highlighter::highlight_line;
 use ratatui::{
     style::{Color, Style},
