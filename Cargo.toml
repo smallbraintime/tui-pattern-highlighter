@@ -2,6 +2,13 @@
 name = "tui-pattern-highlighter"
 version = "0.1.0"
 edition = "2021"
+authors = ["0watcher"]
+description = """
+a dead simple search pattern highlighter for ratatui
+"""
+license = "MIT"
+repository = "https://github.com/0watcher/tui-pattern-highlighter"
+readme = "README.md"
 
 [dependencies]
 ratatui = "0.26.3"
