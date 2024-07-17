@@ -1,6 +1,6 @@
 # tui-pattern-highlighter
 
-![Version](https://img.shields.io/badge/version-0.0.1-orange.svg)
+![Version](https://img.shields.io/badge/version-0.2.1-orange.svg)
 ![Tests](https://img.shields.io/badge/tests-passing-green.svg)
 ![Docs](https://img.shields.io/badge/docs-passing-green.svg)
 
