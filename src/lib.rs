@@ -36,10 +36,14 @@ use regex::Regex;
 /// # Panics
 ///
 /// The function may panic if the provided pattern is an invalid regular expression.
-pub fn highlight_line(line: String, pattern: &str, highlight_style: Style) -> Line {
+pub fn highlight_line<'a>(
+    line: String,
+    pattern: impl AsRef<str>,
+    highlight_style: Style,
+) -> Line<'a> {
     let mut highlighted_line = Line::default();
 
-    let reg = Regex::new(pattern).unwrap();
+    let reg = Regex::new(pattern.as_ref()).unwrap();
     let mut last_index = 0;
 
     for m in reg.find_iter(&line).collect::<Vec<_>>() {
@@ -96,23 +100,27 @@ pub fn highlight_line(line: String, pattern: &str, highlight_style: Style) -> Li
 /// # Panics
 ///
 /// The function may panic if the provided pattern is an invalid regular expression.
-pub fn highlight_text(line: String, pattern: &str, highlight_style: Style) -> Text {
+pub fn highlight_text<'a>(
+    text: String,
+    pattern: impl AsRef<str>,
+    highlight_style: Style,
+) -> Text<'a> {
     let mut highlighted_text = Text::default();
 
     let mut last_index = 0;
 
-    for (i, _) in line.match_indices('\n') {
+    for (i, _) in text.match_indices('\n') {
         highlighted_text.push_line(highlight_line(
-            line[last_index..i].to_string(),
-            pattern,
+            text[last_index..i].to_string(),
+            pattern.as_ref(),
             highlight_style,
         ));
         last_index = i + 1;
     }
 
-    if line.len() > last_index {
+    if text.len() > last_index {
         highlighted_text.push_line(highlight_line(
-            line[last_index..].to_string(),
+            text[last_index..].to_string(),
             pattern,
             highlight_style,
         ));
@@ -145,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn highlighting_text_text() {
+    fn highlighting_text_test() {
         let returned_text = highlight_text(TEXT.to_string(), r"@\w+", STYLE);
         let text = Text::from(vec![
             Line::from(vec![
