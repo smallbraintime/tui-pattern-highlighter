@@ -3,12 +3,13 @@ use ratatui::{
     text::{Line, Span, Text},
 };
 use regex::Regex;
+use std::borrow::Cow;
 
 /// Creates a `Line` from the given `line` argument and adds `highlight_style` to `Spans` that match the pattern.
 ///
 /// # Arguments
 ///
-/// * `line` - A string slice that holds the line of text to be highlighted.
+/// * `line` - A string that holds the line of text to be highlighted.
 /// * `pattern` - A regular expression pattern to match the text that needs to be highlighted.
 /// * `highlight_style` - The style to be applied to the matching text.
 ///
@@ -36,26 +37,27 @@ use regex::Regex;
 /// # Panics
 ///
 /// The function may panic if the provided pattern is an invalid regular expression.
-pub fn highlight_line<'a>(
-    line: String,
-    pattern: impl AsRef<str>,
-    highlight_style: Style,
-) -> Line<'a> {
+pub fn highlight_line<'a, S, T>(line: S, pattern: T, highlight_style: Style) -> Line<'a>
+where
+    S: Into<String>,
+    T: IntoRegexRef,
+{
+    let line_string = line.into();
     let mut highlighted_line = Line::default();
 
-    let reg = Regex::new(pattern.as_ref()).unwrap();
+    let regex_ref = pattern.into_regex_ref();
     let mut last_index = 0;
 
-    for m in reg.find_iter(&line).collect::<Vec<_>>() {
+    for m in regex_ref.find_iter(&line_string).collect::<Vec<_>>() {
         if m.start() > last_index {
-            highlighted_line.push_span(Span::from(line[last_index..m.start()].to_string()));
+            highlighted_line.push_span(Span::from(line_string[last_index..m.start()].to_string()));
         }
         highlighted_line.push_span(Span::from(m.as_str().to_string()).style(highlight_style));
         last_index = m.end();
     }
 
-    if line.len() > last_index {
-        highlighted_line.push_span(Span::from(line[last_index..].to_string()));
+    if line_string.len() > last_index {
+        highlighted_line.push_span(Span::from(line_string[last_index..].to_string()));
     }
 
     highlighted_line
@@ -66,7 +68,7 @@ pub fn highlight_line<'a>(
 ///
 /// # Arguments
 ///
-/// * `text` - A string slice that holds the text to be highlighted.
+/// * `text` - A string that holds the text to be highlighted.
 /// * `pattern` - A regular expression pattern to match the text that needs to be highlighted.
 /// * `highlight_style` - The style to be applied to the matching text.
 ///
@@ -92,7 +94,7 @@ pub fn highlight_line<'a>(
 ///         Span::from("@stranger").style(Style::new().bg(Color::Blue)),
 ///         Span::from(" hello"),
 ///     ]),
-/// ]);
+///     ]);
 ///
 /// assert_eq!(highlight_text(text, pattern, highlight_style), expected_text);
 /// ```
@@ -100,33 +102,68 @@ pub fn highlight_line<'a>(
 /// # Panics
 ///
 /// The function may panic if the provided pattern is an invalid regular expression.
-pub fn highlight_text<'a>(
-    text: String,
-    pattern: impl AsRef<str>,
-    highlight_style: Style,
-) -> Text<'a> {
+pub fn highlight_text<'a, S, T>(text: S, pattern: T, highlight_style: Style) -> Text<'a>
+where
+    S: Into<String>,
+    T: IntoRegexRef + Clone,
+{
+    let text_string = text.into();
     let mut highlighted_text = Text::default();
 
     let mut last_index = 0;
 
-    for (i, _) in text.match_indices('\n') {
+    for (i, _) in text_string.match_indices('\n') {
         highlighted_text.push_line(highlight_line(
-            text[last_index..i].to_string(),
-            pattern.as_ref(),
+            text_string[last_index..i].to_string(),
+            pattern.clone(),
             highlight_style,
         ));
         last_index = i + 1;
     }
 
-    if text.len() > last_index {
+    if text_string.len() > last_index {
         highlighted_text.push_line(highlight_line(
-            text[last_index..].to_string(),
+            text_string[last_index..].to_string(),
             pattern,
             highlight_style,
         ));
     }
 
     highlighted_text
+}
+
+pub trait IntoRegexRef {
+    fn into_regex_ref(self) -> Cow<'static, Regex>;
+}
+
+impl IntoRegexRef for Regex {
+    fn into_regex_ref(self) -> Cow<'static, Regex> {
+        Cow::Owned(self)
+    }
+}
+
+impl<'a> IntoRegexRef for &'a Regex {
+    fn into_regex_ref(self) -> Cow<'static, Regex> {
+        Cow::Owned(self.clone())
+    }
+}
+
+impl IntoRegexRef for String {
+    fn into_regex_ref(self) -> Cow<'static, Regex> {
+        Cow::Owned(Regex::new(&self).unwrap())
+    }
+}
+
+impl<'a> IntoRegexRef for &'a String {
+    fn into_regex_ref(self) -> Cow<'static, Regex> {
+        Cow::Owned(Regex::new(self).unwrap())
+    }
+}
+
+impl<'a> IntoRegexRef for &'a str {
+    fn into_regex_ref(self) -> Cow<'static, Regex> {
+        Cow::Owned(Regex::new(self).unwrap())
+    }
 }
 
 #[cfg(test)]
@@ -140,7 +177,10 @@ mod tests {
 
     #[test]
     fn highlighting_line_test() {
-        let returned_line = highlight_line(TEXT[0..39].to_string(), r"@\w+", STYLE);
+        let returned_line = highlight_line(&TEXT[0..39], r"@\w+", STYLE);
+
+        let regex = Regex::new(r"@\w+").unwrap();
+        let returned_line_reg = highlight_line(&TEXT[0..39], &regex, STYLE);
 
         let line = Line::from(vec![
             Span::from("Hello "),
@@ -150,11 +190,16 @@ mod tests {
         ]);
 
         assert_eq!(returned_line, line);
+        assert_eq!(returned_line_reg, line);
     }
 
     #[test]
     fn highlighting_text_test() {
-        let returned_text = highlight_text(TEXT.to_string(), r"@\w+", STYLE);
+        let returned_text = highlight_text(TEXT, r"@\w+", STYLE);
+
+        let regex = Regex::new(r"@\w+").unwrap();
+        let returned_text_reg = highlight_text(TEXT, &regex, STYLE);
+
         let text = Text::from(vec![
             Line::from(vec![
                 Span::from("Hello "),
@@ -172,5 +217,6 @@ mod tests {
         ]);
 
         assert_eq!(returned_text, text);
+        assert_eq!(returned_text_reg, text);
     }
 }
