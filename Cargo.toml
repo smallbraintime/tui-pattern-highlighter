@@ -1,6 +1,6 @@
 [package]
 name = "tui-pattern-highlighter"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 authors = ["0watcher"]
 description = """
@@ -11,5 +11,5 @@ repository = "https://github.com/0watcher/tui-pattern-highlighter"
 readme = "README.md"
 
 [dependencies]
-ratatui = "0.27.0"
-regex = "1.10.4"
+ratatui = "<0.30.0"
+regex = "1.11.1"
